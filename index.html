@@ -3,80 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRACKERPRO | Monitoramento</title>
+    <title>TRACKERPRO | GPS</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="app-container">
+    <div class="container">
         <header>
             <div class="logo">TRACKER<span>PRO</span></div>
-            <div id="status" class="status-off">SINAL GPS: OFF</div>
+            <div id="status" class="status-box">SINAL: AGUARDANDO</div>
         </header>
 
-        <div id="map-display" class="map-box">
-            <div class="msg">Aguardando sinal de satélite...</div>
+        <div id="map-area" class="map-container">
+            <p style="color: #444;">A carregar satélites...</p>
         </div>
 
-        <div class="telemetry">
-            <div class="data-row">
-                <span class="label">LATITUDE:</span>
+        <div class="telemetria">
+            <div class="campo">
+                <span class="lbl">LATITUDE</span>
                 <span id="lat-val" class="val">0.000000</span>
             </div>
-            <div class="data-row">
-                <span class="label">LONGITUDE:</span>
+            <div class="campo">
+                <span class="lbl">LONGITUDE</span>
                 <span id="lng-val" class="val">0.000000</span>
             </div>
-            <div class="data-row">
-                <span class="label">HORÁRIO:</span>
+            <div class="campo">
+                <span class="lbl">ÚLTIMA ATUALIZAÇÃO</span>
                 <span id="time-val" class="val">--:--:--</span>
             </div>
         </div>
 
-        <button id="btn-send" class="btn-primary">ENVIAR FOTO PARA O DRIVE</button>
+        <button id="btn-main" class="btn-send">ENVIAR FOTO E ABRIR PASTA</button>
     </div>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyWW4WkLOJW05zQhxP3j-52x9oT6E_87cLPod8puXLQ4Vskh06hwNhhG53KtqEbp-ko8w/exec"; 
-        let lastLat, lastLng;
+        // ATENÇÃO: Substitua pelo seu novo URL de Deploy (/exec)
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzy4YdjYRBmgFv3GsUtyD6-aTxW3PNQZ7iSW0gVtxW_Q7rAajghaY0K5XYhuoKXB6wsbA/exec"; 
+        
+        let currentLat, currentLng;
 
-        // Monitoramento do GPS
+        // Monitor de GPS (Mapa Estático: carrega uma vez e fixa)
         navigator.geolocation.watchPosition(p => {
-            lastLat = p.coords.latitude;
-            lastLng = p.coords.longitude;
+            currentLat = p.coords.latitude;
+            currentLng = p.coords.longitude;
             
-            document.getElementById('lat-val').innerText = lastLat.toFixed(6);
-            document.getElementById('lng-val').innerText = lastLng.toFixed(6);
-            document.getElementById('status').innerText = "SINAL GPS: OK";
-            document.getElementById('status').className = "status-on";
+            document.getElementById('lat-val').innerText = currentLat.toFixed(6);
+            document.getElementById('lng-val').innerText = currentLng.toFixed(6);
+            document.getElementById('status').innerText = "SINAL: ONLINE";
+            document.getElementById('status').style.color = "#00ff00";
 
-            // Atualiza o mapa estático na tela apenas na primeira vez
             if (!document.querySelector('iframe')) {
-                const embed = `https://maps.google.com/maps?q=${lastLat},${lastLng}&z=17&output=embed`;
-                document.getElementById('map-display').innerHTML = `<iframe src="${embed}"></iframe>`;
+                const embed = `https://maps.google.com/maps?q=${currentLat},${currentLng}&z=17&output=embed`;
+                document.getElementById('map-area').innerHTML = `<iframe src="${embed}"></iframe>`;
             }
         }, null, { enableHighAccuracy: true });
 
-        // Envio da Foto
-        document.getElementById('btn-send').onclick = async function() {
-            if (!lastLat) return alert("Aguardando GPS...");
+        // Acção do Botão
+        document.getElementById('btn-main').onclick = async function() {
+            if (!currentLat) return alert("Aguarde o sinal do GPS...");
             
             const btn = this;
-            btn.innerText = "ENVIANDO...";
+            btn.innerText = "A PROCESSAR...";
             btn.disabled = true;
 
             try {
-                await fetch(SCRIPT_URL, {
+                const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ lat: lastLat, lng: lastLng })
+                    mode: 'no-cors', // Mantido para evitar erro de CORS do Google
+                    body: JSON.stringify({ lat: currentLat, lng: currentLng })
                 });
+
+                // Como 'no-cors' não permite ler o corpo da resposta no fetch comum,
+                // vamos disparar a abertura da pasta raiz em caso de sucesso no envio
+                // ou usar um redireccionamento programado.
+                
                 document.getElementById('time-val').innerText = new Date().toLocaleTimeString();
-                alert("Foto enviada com sucesso!");
+                
+                // Redireccionamento manual para a pasta após o envio
+                const linkRaiz = "https://drive.google.com/drive/folders/1IK3IHvuCTOwBwxKX2skZKtXyQGR5IRN9";
+                window.location.href = linkRaiz;
+
             } catch (e) {
-                alert("Erro ao enviar.");
+                alert("Erro ao comunicar com o servidor.");
             } finally {
-                btn.innerText = "ENVIAR FOTO PARA O DRIVE";
+                btn.innerText = "ENVIAR FOTO E ABRIR PASTA";
                 btn.disabled = false;
             }
         };
