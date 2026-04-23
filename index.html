@@ -2,276 +2,68 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TRACKER PRO | Rastreamento Veicular</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRACKERPRO - TESTE</title>
     <style>
-        /* DESIGN SENIOR - MODO DARK INDUSTRIAL */
-        :root {
-            --bg: #0d1117;
-            --card: #161b22;
-            --accent: #58a6ff;
-            --text: #c9d1d9;
-            --success: #238636;
-            --danger: #da3633;
-            --border: #30363d;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            min-height: 100vh;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 500px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-        }
-
-        .logo { font-weight: 800; letter-spacing: 1px; color: #fff; }
-        .logo span { color: var(--accent); }
-
-        .status-box {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.75rem;
-            background: #000;
-            padding: 5px 12px;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-        }
-
-        .dot {
-            width: 8px;
-            height: 8px;
-            background: #444;
-            border-radius: 50%;
-        }
-
-        .dot.active {
-            background: var(--success);
-            box-shadow: 0 0 10px var(--success);
-            animation: pulse 1.5s infinite;
-        }
-
-        /* ÁREA DO MAPA */
-        .map-frame {
-            width: 100%;
-            height: 350px;
-            background: #000;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            overflow: hidden;
-            position: relative;
-        }
-
-        iframe { width: 100%; height: 100%; border: none; }
-
-        .map-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #484f58;
-            font-size: 0.9rem;
-            text-align: center;
-        }
-
-        /* PAINEL DE DADOS */
-        .grid-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .card {
-            background: var(--card);
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-        }
-
-        .card.full { grid-column: span 2; }
-
-        label {
-            display: block;
-            font-size: 0.65rem;
-            color: #8b949e;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            font-weight: bold;
-        }
-
-        .val {
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-            font-size: 1.1rem;
-            color: #fff;
-        }
-
-        /* BOTÃO PRINCIPAL */
-        .btn-action {
-            width: 100%;
-            padding: 22px;
-            border-radius: 12px;
-            border: none;
-            background-color: var(--accent);
-            color: #fff;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 10px;
-        }
-
-        .btn-action.stop { background-color: var(--danger); }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.4; }
-            100% { opacity: 1; }
-        }
+        body { background: #111; color: #eee; font-family: sans-serif; text-align: center; padding: 20px; }
+        .box { background: #222; padding: 20px; border-radius: 10px; border: 1px solid #444; margin-bottom: 15px; }
+        .btn { background: #007bff; color: white; border: none; padding: 20px; width: 100%; border-radius: 10px; font-weight: bold; font-size: 1.2rem; cursor: pointer; }
+        .status { font-size: 0.8rem; margin-bottom: 10px; color: #888; }
+        #map-preview { width: 100%; height: 200px; background: #000; margin: 10px 0; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <header>
-        <div class="logo">TRACKER<span>PRO</span></div>
-        <div class="status-box">
-            <div id="status-dot" class="dot"></div>
-            <span id="status-txt">OFFLINE</span>
-        </div>
-    </header>
+    <h2>TRACKER<span>PRO</span></h2>
+    <div id="status-txt" class="status">SISTEMA OFFLINE</div>
 
-    <div class="map-frame" id="map-container">
-        <div class="map-overlay" id="map-msg">Aguardando sinal GPS...</div>
+    <div class="box">
+        <div id="map-preview">Aguardando GPS...</div>
+        <p>Lat: <span id="lat">0.0</span></p>
+        <p>Lng: <span id="lng">0.0</span></p>
+        <p>Sinc: <span id="sync">--:--:--</span></p>
     </div>
 
-    <div class="grid-stats">
-        <div class="card">
-            <label>Latitude</label>
-            <div id="lat-display" class="val">0.000000</div>
-        </div>
-        <div class="card">
-            <label>Longitude</label>
-            <div id="lng-display" class="val">0.000000</div>
-        </div>
-        <div class="card full">
-            <label>Última Sincronização (Drive)</label>
-            <div id="sync-display" class="val">--:--:--</div>
-        </div>
-    </div>
+    <button id="btn-foto" class="btn">TIRAR FOTO E SALVAR NO DRIVE</button>
 
-    <button id="main-button" class="btn-action">Iniciar Rastreamento</button>
-</div>
+    <script>
+        // REDEPLOY O SCRIPT E COLE A NOVA URL AQUI:
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_Z5Ry3bJmDJLgawl7x6Ey83WKOnmRKKQad3bgLD5mzwm9nvm6_Fqwkmvxnfz9_VM3/exec"; 
 
-<script>
-    // ==========================================
-    // CONFIGURAÇÃO: COLE SUA URL ABAIXO
-    // ==========================================
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwb0XW1Xh0IHUWMLeU1DfXdcGqKohHJ1GbW80xFuucRWjCl5_x4pKzYZ9Qv8PbrSqmz/exec"; 
+        let userLat, userLng;
 
-    let isRunning = false;
-    let watchId = null;
-    let syncTimer = null;
-    let currentLat = null;
-    let currentLng = null;
+        // Inicia GPS ao carregar
+        navigator.geolocation.watchPosition(p => {
+            userLat = p.coords.latitude;
+            userLng = p.coords.longitude;
+            document.getElementById('lat').innerText = userLat.toFixed(6);
+            document.getElementById('lng').innerText = userLng.toFixed(6);
+            document.getElementById('status-txt').innerText = "SISTEMA ONLINE";
+            document.getElementById('map-preview').innerHTML = `<iframe width="100%" height="100%" frameborder="0" src="https://maps.google.com/maps?q=${userLat},${userLng}&z=15&output=embed"></iframe>`;
+        }, null, {enableHighAccuracy: true});
 
-    const btn = document.getElementById('main-button');
-    const statusTxt = document.getElementById('status-txt');
-    const statusDot = document.getElementById('status-dot');
-    const mapContainer = document.getElementById('map-container');
-
-    // Função para enviar os dados para o Google Drive
-    async function sendToDrive() {
-        if (!currentLat || !currentLng) return;
-
-        const payload = {
-            lat: currentLat,
-            lng: currentLng
-        };
-
-        try {
-            await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors', // Essencial para Google Apps Script
-                cache: 'no-cache',
-                body: JSON.stringify(payload)
-            });
+        document.getElementById('btn-foto').onclick = async function() {
+            if(!userLat) return alert("Aguarde o sinal do GPS");
             
-            document.getElementById('sync-display').innerText = new Date().toLocaleTimeString();
-            console.log("Sincronizado.");
-        } catch (error) {
-            console.error("Falha no sync:", error);
-        }
-    }
+            this.innerText = "ENVIANDO...";
+            this.style.background = "#555";
 
-    // Gerenciar o clique no botão
-    btn.addEventListener('click', () => {
-        if (!isRunning) {
-            if (!navigator.geolocation) {
-                alert("GPS não suportado neste aparelho.");
-                return;
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({lat: userLat, lng: userLng})
+                });
+                
+                document.getElementById('sync').innerText = new Date().toLocaleTimeString();
+                alert("Comando enviado! Verifique a pasta no Drive.");
+            } catch (e) {
+                alert("Erro na conexão");
+            } finally {
+                this.innerText = "TIRAR FOTO E SALVAR NO DRIVE";
+                this.style.background = "#007bff";
             }
-
-            isRunning = true;
-            btn.innerText = "Encerrar Monitoramento";
-            btn.classList.add('stop');
-            statusTxt.innerText = "BUSCANDO...";
-
-            // 1. Iniciar captura de GPS em tempo real
-            watchId = navigator.geolocation.watchPosition(
-                (pos) => {
-                    currentLat = pos.coords.latitude;
-                    currentLng = pos.coords.longitude;
-
-                    // Atualizar tela
-                    document.getElementById('lat-display').innerText = currentLat.toFixed(6);
-                    document.getElementById('lng-display').innerText = currentLng.toFixed(6);
-                    statusTxt.innerText = "ONLINE";
-                    statusDot.classList.add('active');
-
-                    // Atualizar Mapa (Embed Simples)
-                    const embed = `https://maps.google.com/maps?q=${currentLat},${currentLng}&z=17&output=embed`;
-                    mapContainer.innerHTML = `<iframe src="${embed}"></iframe>`;
-                    
-                    // Iniciar o ciclo de 5 segundos se ainda não existir
-                    if (!syncTimer) {
-                        sendToDrive(); // Envia o primeiro imediatamente
-                        syncTimer = setInterval(sendToDrive, 5000);
-                    }
-                },
-                (err) => {
-                    alert("Erro ao acessar GPS. Verifique as permissões.");
-                    location.reload();
-                },
-                { enableHighAccuracy: true }
-            );
-
-        } else {
-            // Resetar aplicação
-            location.reload();
-        }
-    });
-</script>
-
+        };
+    </script>
 </body>
 </html>
