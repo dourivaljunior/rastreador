@@ -2,63 +2,84 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GERADOR DE PASTA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>TrackerPro - GPS</title>
     <style>
-        body { 
-            background: #000; 
-            color: #fff; 
-            font-family: sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0; 
-        }
-        .btn { 
-            background: #238636; 
-            color: #fff; 
-            border: none; 
-            padding: 30px 60px; 
-            border-radius: 12px; 
-            font-size: 1.5rem; 
-            font-weight: bold; 
-            cursor: pointer; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .btn:active { transform: scale(0.95); background: #2ea043; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 420px; background: #1e293b; padding: 15px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+        
+        #map-display { width: 100%; height: 350px; border-radius: 12px; border: 2px solid #3b82f6; overflow: hidden; background: #000; margin-bottom: 10px; }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        button { border: none; padding: 20px; border-radius: 10px; font-weight: bold; cursor: pointer; color: white; font-size: 16px; transition: 0.2s; width: 100%; }
+        button:active { transform: scale(0.96); opacity: 0.8; }
+        
+        .orange { background: #f59e0b; margin-top: 10px; }
+        
+        #status { font-size: 12px; color: #94a3b8; text-align: center; margin-top: 15px; min-height: 15px; }
+        .logo { font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; text-align: center; }
+        .logo span { color: #3b82f6; }
     </style>
 </head>
 <body>
 
-    <button id="executar" class="btn">GERAR PASTA NO DRIVE v2 </button>
+<div class="container">
+    <div class="logo">TRACKER<span>PRO</span></div>
 
-    <script>
-        // SUBSTITUA PELA SUA URL DE DEPLOY
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHqn-8hadHExDW7VFnOdeJuB8_-ulw_IYZbp7vVm5LTpRTRfuUKsnkiX9yNMIJK5a9kQ/exec";
+    <div id="map-display">
+        <div style="text-align:center; padding-top:150px; color:#475569;">Buscando satélites...</div>
+    </div>
 
-        document.getElementById('executar').onclick = async function() {
-            const botao = this;
-            botao.innerText = "CRIANDO...";
-            botao.style.opacity = "0.5";
-            
-            try {
-                // Enviando como 'text/plain' para evitar problemas de pré-vôo (CORS)
-                await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({acao: "criar_pasta_hoje"})
-                });
+    <button class="orange" onclick="enviarLocalizacao()">📍 ENVIAR MAPA AO DRIVE</button>
 
-                alert("Comando enviado! Verifique o Google Drive.");
-            } catch (e) {
-                alert("Falha ao contactar o servidor.");
-            } finally {
-                botao.innerText = "GERAR PASTA NO DRIV v2E";
-                botao.style.opacity = "1";
-            }
-        };
-    </script>
+    <div id="status">Iniciando GPS...</div>
+</div>
+
+<script>
+    // Substitua pela sua URL do Apps Script
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqGtEV6Dqk76VH43S3P4Qd59r0OSlWUU3nivnFAnOs8YX8qrKC5-OjY8h-UxHfI2daHg/exec";
+    const st = document.getElementById("status");
+    const mapArea = document.getElementById("map-display");
+    let lat, lng;
+
+    function monitorarPosicao() {
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(p => {
+                lat = p.coords.latitude;
+                lng = p.coords.longitude;
+                st.innerText = `GPS Online: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                
+                // Mapa interativo na tela do celular
+                const urlMapa = `https://maps.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
+                mapArea.innerHTML = `<iframe src="${urlMapa}"></iframe>`;
+            }, e => {
+                st.innerText = "Erro: Ative o GPS do aparelho.";
+            }, { enableHighAccuracy: true });
+        }
+    }
+
+    async function enviar(dados) {
+        st.innerText = "Sincronizando com Drive...";
+        dados.latitude = lat;
+        dados.longitude = lng;
+
+        return fetch(SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify(dados)
+        }).then(() => {
+            st.innerText = "✅ Mapa enviado com sucesso!";
+            setTimeout(() => { st.innerText = `GPS Online: ${lat.toFixed(5)}, ${lng.toFixed(5)}`; }, 3000);
+        });
+    }
+
+    function enviarLocalizacao() {
+        if(!lat) return alert("Aguarde o sinal do GPS!");
+        enviar({tipo: "mapa"});
+    }
+
+    // Iniciar monitoramento ao carregar
+    monitorarPosicao();
+</script>
 </body>
 </html>
