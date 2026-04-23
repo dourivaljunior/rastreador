@@ -23,14 +23,14 @@
         <div style="text-align:center; padding-top:150px; color:#475569;">Buscando satélites...</div>
     </div>
 
-    <button onclick="enviarLocalizacao()">📍 ENVIAR MAPA E ABRIR PASTA</button>
+    <button onclick="enviarLocalizacao()">📍 ENVIAR MAPA E ABRIR DRIVE</button>
 
     <div id="status">Iniciando GPS...</div>
 </div>
 
 <script>
-    // IMPORTANTE: Use a sua URL de Deploy aqui
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZP8zUJHUe9jQX5NM2UkJtx1baV5ub6z2EwCSrBCMEcmsakBoY7viEEIckXHcZg6EASw/exec";
+    // URL DO SEU SCRIPT
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzURsi0KnaxRCO5HIj1XU1iR6AOFAs8PFGCQ8frgFX2EMYLSDCtPSPjq_7hrlOdgSFC/exec";
     const st = document.getElementById("status");
     const mapArea = document.getElementById("map-display");
     let lat, lng;
@@ -50,27 +50,27 @@
     async function enviarLocalizacao() {
         if(!lat) return alert("Aguarde o sinal do GPS!");
         
-        st.innerText = "Sincronizando e Gerando Link...";
+        st.innerText = "Enviando dados ao Drive...";
         const btn = document.querySelector("button");
         btn.disabled = true;
 
         try {
-            const response = await fetch(SCRIPT_URL, {
+            // O uso de 'no-cors' impede o erro de comunicação do servidor
+            await fetch(SCRIPT_URL, {
                 method: "POST",
+                mode: "no-cors",
                 body: JSON.stringify({ latitude: lat, longitude: lng })
             });
 
-            const linkPasta = await response.text();
+            st.innerText = "✅ Sincronizado! Abrindo Drive...";
+            
+            // Abre a pasta raiz onde as subpastas diárias são criadas
+            setTimeout(() => {
+                window.location.href = "https://drive.google.com/drive/folders/1IK3IHvuCTOwBwxKX2skZKtXyQGR5IRN9";
+            }, 1000);
 
-            if (linkPasta.includes("drive.google.com")) {
-                st.innerText = "✅ Sucesso! Abrindo pasta...";
-                // Redireciona para a pasta criada
-                window.location.href = linkPasta;
-            } else {
-                alert("Erro ao obter link da pasta.");
-            }
         } catch (e) {
-            alert("Erro na comunicação com o servidor.");
+            alert("Erro na conexão. Verifique a internet.");
         } finally {
             btn.disabled = false;
         }
