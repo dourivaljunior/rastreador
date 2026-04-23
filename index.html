@@ -19,13 +19,14 @@
             background: #238636; 
             color: #fff; 
             border: none; 
-            padding: 25px 50px; 
-            border-radius: 10px; 
-            font-size: 1.2rem; 
+            padding: 30px 60px; 
+            border-radius: 12px; 
+            font-size: 1.5rem; 
             font-weight: bold; 
             cursor: pointer; 
-            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
+        .btn:active { transform: scale(0.95); background: #2ea043; }
     </style>
 </head>
 <body>
@@ -33,24 +34,29 @@
     <button id="executar" class="btn">GERAR PASTA NO DRIVE</button>
 
     <script>
-        // COLE A URL DO SEU DEPLOY (/exec) ABAIXO
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxxE7RaLqYKc6yy_MJqfVp5WEgukcXbCTLhpcD-SniHM8Jah8qSVO8xqdbE9S0p3L5C/exec";
+        // SUBSTITUA PELA SUA URL DE DEPLOY
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHqn-8hadHExDW7VFnOdeJuB8_-ulw_IYZbp7vVm5LTpRTRfuUKsnkiX9yNMIJK5a9kQ/exec";
 
         document.getElementById('executar').onclick = async function() {
-            this.innerText = "ENVIANDO...";
+            const botao = this;
+            botao.innerText = "CRIANDO...";
+            botao.style.opacity = "0.5";
             
             try {
+                // Enviando como 'text/plain' para evitar problemas de pré-vôo (CORS)
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    body: JSON.stringify({comando: "gerar_pasta"})
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({acao: "criar_pasta_hoje"})
                 });
 
-                alert("Comando enviado com sucesso!");
+                alert("Comando enviado! Verifique o Google Drive.");
             } catch (e) {
-                alert("Erro de conexão.");
+                alert("Falha ao contactar o servidor.");
             } finally {
-                this.innerText = "GERAR PASTA NO DRIVE";
+                botao.innerText = "GERAR PASTA NO DRIVE";
+                botao.style.opacity = "1";
             }
         };
     </script>
