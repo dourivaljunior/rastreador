@@ -3,36 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TESTE DRIVE</title>
-    <style>
-        body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .btn { background: #238636; color: #fff; border: none; padding: 30px 60px; border-radius: 10px; font-size: 1.5rem; font-weight: bold; cursor: pointer; border: 2px solid #30363d; }
-        .btn:active { background: #2ea043; }
-    </style>
+    <title>TRACKERPRO | Monitoramento</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <button id="btn-teste" class="btn">CRIAR PASTA NO DRIVE</button>
+    <div class="app-container">
+        <header>
+            <div class="logo">TRACKER<span>PRO</span></div>
+            <div id="status" class="status-off">SINAL GPS: OFF</div>
+        </header>
+
+        <div id="map-display" class="map-box">
+            <div class="msg">Aguardando sinal de satélite...</div>
+        </div>
+
+        <div class="telemetry">
+            <div class="data-row">
+                <span class="label">LATITUDE:</span>
+                <span id="lat-val" class="val">0.000000</span>
+            </div>
+            <div class="data-row">
+                <span class="label">LONGITUDE:</span>
+                <span id="lng-val" class="val">0.000000</span>
+            </div>
+            <div class="data-row">
+                <span class="label">HORÁRIO:</span>
+                <span id="time-val" class="val">--:--:--</span>
+            </div>
+        </div>
+
+        <button id="btn-send" class="btn-primary">ENVIAR FOTO PARA O DRIVE</button>
+    </div>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxtKvOZ_W__eoyBDUJYUxlZi0vd2KcktSJxg2OEp5HKbmQyfkFJfoHb6TDvhpvymQrd/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoay8L9pyDogTA9uJMgQ84g1aVmZTjppfY6m9GZ37qc215oxw0ON4qqr3V33Sbz69P/exec"; 
+        let lastLat, lastLng;
 
-        document.getElementById('btn-teste').onclick = async function() {
-            this.innerText = "PROCESSANDO...";
-            this.style.opacity = "0.5";
+        // Monitoramento do GPS
+        navigator.geolocation.watchPosition(p => {
+            lastLat = p.coords.latitude;
+            lastLng = p.coords.longitude;
+            
+            document.getElementById('lat-val').innerText = lastLat.toFixed(6);
+            document.getElementById('lng-val').innerText = lastLng.toFixed(6);
+            document.getElementById('status').innerText = "SINAL GPS: OK";
+            document.getElementById('status').className = "status-on";
+
+            // Atualiza o mapa estático na tela apenas na primeira vez
+            if (!document.querySelector('iframe')) {
+                const embed = `https://maps.google.com/maps?q=${lastLat},${lastLng}&z=17&output=embed`;
+                document.getElementById('map-display').innerHTML = `<iframe src="${embed}"></iframe>`;
+            }
+        }, null, { enableHighAccuracy: true });
+
+        // Envio da Foto
+        document.getElementById('btn-send').onclick = async function() {
+            if (!lastLat) return alert("Aguardando GPS...");
+            
+            const btn = this;
+            btn.innerText = "ENVIANDO...";
+            btn.disabled = true;
 
             try {
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    body: JSON.stringify({acao: "criar_pasta"})
+                    body: JSON.stringify({ lat: lastLat, lng: lastLng })
                 });
-                alert("Comando enviado! Verifique o Google Drive.");
+                document.getElementById('time-val').innerText = new Date().toLocaleTimeString();
+                alert("Foto enviada com sucesso!");
             } catch (e) {
-                alert("Erro na requisição.");
+                alert("Erro ao enviar.");
             } finally {
-                this.innerText = "CRIAR PASTA NO DRIVE";
-                this.style.opacity = "1";
+                btn.innerText = "ENVIAR FOTO PARA O DRIVE";
+                btn.disabled = false;
             }
         };
     </script>
