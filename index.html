@@ -7,37 +7,30 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 420px; background: #1e293b; padding: 15px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
-        
         #map-display { width: 100%; height: 350px; border-radius: 12px; border: 2px solid #3b82f6; overflow: hidden; background: #000; margin-bottom: 10px; }
         iframe { width: 100%; height: 100%; border: none; }
-
-        button { border: none; padding: 20px; border-radius: 10px; font-weight: bold; cursor: pointer; color: white; font-size: 16px; transition: 0.2s; width: 100%; }
+        button { border: none; padding: 20px; border-radius: 10px; font-weight: bold; cursor: pointer; color: white; font-size: 16px; transition: 0.2s; width: 100%; background: #f59e0b; }
         button:active { transform: scale(0.96); opacity: 0.8; }
-        
-        .orange { background: #f59e0b; margin-top: 10px; }
-        
         #status { font-size: 12px; color: #94a3b8; text-align: center; margin-top: 15px; min-height: 15px; }
-        .logo { font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; text-align: center; }
-        .logo span { color: #3b82f6; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="logo">TRACKER<span>PRO</span></div>
+    <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; text-align: center;">TRACKER<span style="color:#3b82f6">PRO</span></div>
 
     <div id="map-display">
         <div style="text-align:center; padding-top:150px; color:#475569;">Buscando satélites...</div>
     </div>
 
-    <button class="orange" onclick="enviarLocalizacao()">📍 ENVIAR MAPA AO DRIVE</button>
+    <button onclick="enviarLocalizacao()">📍 ENVIAR MAPA E ABRIR PASTA</button>
 
     <div id="status">Iniciando GPS...</div>
 </div>
 
 <script>
-    // Substitua pela sua URL do Apps Script
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqGtEV6Dqk76VH43S3P4Qd59r0OSlWUU3nivnFAnOs8YX8qrKC5-OjY8h-UxHfI2daHg/exec";
+    // IMPORTANTE: Use a sua URL de Deploy aqui
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZP8zUJHUe9jQX5NM2UkJtx1baV5ub6z2EwCSrBCMEcmsakBoY7viEEIckXHcZg6EASw/exec";
     const st = document.getElementById("status");
     const mapArea = document.getElementById("map-display");
     let lat, lng;
@@ -48,37 +41,41 @@
                 lat = p.coords.latitude;
                 lng = p.coords.longitude;
                 st.innerText = `GPS Online: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                
-                // Mapa interativo na tela do celular
                 const urlMapa = `https://maps.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
                 mapArea.innerHTML = `<iframe src="${urlMapa}"></iframe>`;
-            }, e => {
-                st.innerText = "Erro: Ative o GPS do aparelho.";
-            }, { enableHighAccuracy: true });
+            }, null, { enableHighAccuracy: true });
         }
     }
 
-    async function enviar(dados) {
-        st.innerText = "Sincronizando com Drive...";
-        dados.latitude = lat;
-        dados.longitude = lng;
-
-        return fetch(SCRIPT_URL, {
-            method: "POST",
-            mode: "no-cors",
-            body: JSON.stringify(dados)
-        }).then(() => {
-            st.innerText = "✅ Mapa enviado com sucesso!";
-            setTimeout(() => { st.innerText = `GPS Online: ${lat.toFixed(5)}, ${lng.toFixed(5)}`; }, 3000);
-        });
-    }
-
-    function enviarLocalizacao() {
+    async function enviarLocalizacao() {
         if(!lat) return alert("Aguarde o sinal do GPS!");
-        enviar({tipo: "mapa"});
+        
+        st.innerText = "Sincronizando e Gerando Link...";
+        const btn = document.querySelector("button");
+        btn.disabled = true;
+
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ latitude: lat, longitude: lng })
+            });
+
+            const linkPasta = await response.text();
+
+            if (linkPasta.includes("drive.google.com")) {
+                st.innerText = "✅ Sucesso! Abrindo pasta...";
+                // Redireciona para a pasta criada
+                window.location.href = linkPasta;
+            } else {
+                alert("Erro ao obter link da pasta.");
+            }
+        } catch (e) {
+            alert("Erro na comunicação com o servidor.");
+        } finally {
+            btn.disabled = false;
+        }
     }
 
-    // Iniciar monitoramento ao carregar
     monitorarPosicao();
 </script>
 </body>
