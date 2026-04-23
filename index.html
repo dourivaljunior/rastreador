@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GPS Tracker | Monitoramento</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <div class="status-indicator">
+                <span id="dot" class="dot"></span>
+                <span id="status-text">SISTEMA OFFLINE</span>
+            </div>
+            <h1>TRACKER<span>PRO</span></h1>
+        </header>
+
+        <div id="map-view" class="map-container">
+            <div class="map-placeholder">Aguardando sinal GPS...</div>
+        </div>
+
+        <div class="telemetry-grid">
+            <div class="stat-card">
+                <label>LATITUDE</label>
+                <div id="lat-val">0.000000</div>
+            </div>
+            <div class="stat-card">
+                <label>LONGITUDE</label>
+                <div id="lng-val">0.000000</div>
+            </div>
+            <div class="stat-card full">
+                <label>ÚLTIMA ATUALIZAÇÃO</label>
+                <div id="time-val">--:--:--</div>
+            </div>
+        </div>
+
+        <button id="btn-start" class="btn-main">INICIAR RASTREAMENTO</button>
+    </div>
+
+    <script>
+        const SCRIPT_URL = "SUA_URL_DO_APPS_SCRIPT_AQUI"; // URL do Deploy
+        let isTracking = false;
+        let watchID = null;
+        let lastLat, lastLng;
+
+        const btn = document.getElementById('btn-start');
+        const dot = document.getElementById('dot');
+        const statusText = document.getElementById('status-text');
+
+        function updateMap(lat, lng) {
+            const mapUrl = `https://www.google.com/maps/embed/v1/view?key=SUA_MAPS_API_KEY_OPCIONAL&center=${lat},${lng}&zoom=17`;
+            // Se não tiver chave API, usamos o link embed simples:
+            const simpleMap = `https://maps.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
+            document.getElementById('map-view').innerHTML = `<iframe src="${simpleMap}"></iframe>`;
+        }
+
+        async function sendData() {
+            if (!isTracking || !lastLat) return;
+
+            const payload = { lat: lastLat, lng: lastLng };
+            
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify(payload)
+                });
+                document.getElementById('time-val').innerText = new Date().toLocaleTimeString();
+                console.log("Evidência enviada.");
+            } catch (e) {
+                console.error("Falha no sync.");
+            }
+        }
+
+        btn.addEventListener('click', () => {
+            if (!isTracking) {
+                isTracking = true;
+                btn.innerText = "PARAR RASTREAMENTO";
+                btn.classList.add('active');
+                dot.classList.add('live');
+                statusText.innerText = "SISTEMA ONLINE";
+                
+                // Inicia GPS
+                watchID = navigator.geolocation.watchPosition(p => {
+                    lastLat = p.coords.latitude;
+                    lastLng = p.coords.longitude;
+                    document.getElementById('lat-val').innerText = lastLat.toFixed(6);
+                    document.getElementById('lng-val').innerText = lastLng.toFixed(6);
+                    updateMap(lastLat, lastLng);
+                }, null, { enableHighAccuracy: true });
+
+                // Loop de 5 segundos
+                window.trackingInterval = setInterval(sendData, 5000);
+            } else {
+                location.reload(); // Forma mais limpa de parar tudo
+            }
+        });
+    </script>
+</body>
+</html>
