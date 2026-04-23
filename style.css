@@ -1,22 +1,14 @@
-:root {
-    --bg: #0a0a0a;
-    --card: #1a1a1a;
-    --accent: #0070f3;
-    --text: #eaeaea;
-    --border: #333;
-}
-
 body {
-    background-color: var(--bg);
-    color: var(--text);
-    font-family: 'Segoe UI', Roboto, sans-serif;
+    background-color: #000;
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     display: flex;
     justify-content: center;
-    padding: 15px;
+    padding: 20px;
 }
 
-.app-container {
+.container {
     width: 100%;
     max-width: 400px;
     display: flex;
@@ -28,19 +20,18 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding-bottom: 10px;
 }
 
-.logo { font-weight: bold; font-size: 1.2rem; }
-.logo span { color: var(--accent); }
+.logo { font-weight: bold; font-size: 1.4rem; }
+.logo span { color: #0070f3; }
+.status-box { font-size: 0.7rem; font-weight: bold; color: #555; }
 
-.status-off { color: #555; font-size: 0.8rem; font-weight: bold; }
-.status-on { color: #00ff00; font-size: 0.8rem; font-weight: bold; text-shadow: 0 0 5px #00ff00; }
-
-.map-box {
+.map-container {
     width: 100%;
     height: 300px;
-    background: #000;
-    border: 1px solid var(--border);
+    background: #111;
+    border: 1px solid #333;
     border-radius: 12px;
     overflow: hidden;
     display: flex;
@@ -50,35 +41,35 @@ header {
 
 iframe { width: 100%; height: 100%; border: none; }
 
-.telemetry {
-    background: var(--card);
+.telemetria {
+    background: #111;
     padding: 15px;
     border-radius: 12px;
-    border: 1px solid var(--border);
+    border: 1px solid #333;
 }
 
-.data-row {
+.campo {
     display: flex;
     justify-content: space-between;
-    padding: 8px 0;
+    padding: 10px 0;
     border-bottom: 1px solid #222;
 }
 
-.data-row:last-child { border-bottom: none; }
+.campo:last-child { border-bottom: none; }
 
-.label { color: #888; font-size: 0.75rem; font-weight: bold; }
-.val { font-family: monospace; font-size: 1rem; color: #fff; }
+.lbl { color: #666; font-size: 0.7rem; font-weight: bold; }
+.val { font-family: 'Courier New', Courier, monospace; font-size: 1rem; color: #fff; }
 
-.btn-primary {
-    background: var(--accent);
+.btn-send {
+    background: #0070f3;
     color: white;
     border: none;
-    padding: 20px;
+    padding: 22px;
     border-radius: 12px;
     font-weight: bold;
     font-size: 1rem;
     cursor: pointer;
-    transition: 0.2s;
+    text-transform: uppercase;
 }
 
-.btn-primary:active { transform: scale(0.98); background: #0056b3; }
+.btn-send:active { background: #0056b3; transform: scale(0.98); }
