@@ -18,7 +18,9 @@
         </header>
 
         <div id="map-view" class="map-container">
-            <div class="map-placeholder">Aguardando sinal GPS...</div>
+            <div id="placeholder-text" style="padding: 100px 20px; text-align: center; color: #475569;">
+                Aguardando autorização do GPS...
+            </div>
         </div>
 
         <div class="telemetry-grid">
@@ -31,71 +33,100 @@
                 <div id="lng-val">0.000000</div>
             </div>
             <div class="stat-card full">
-                <label>ÚLTIMA ATUALIZAÇÃO</label>
+                <label>ÚLTIMA SINCRONIZAÇÃO</label>
                 <div id="time-val">--:--:--</div>
             </div>
         </div>
 
-        <button id="btn-start" class="btn-main">INICIAR RASTREAMENTO</button>
+        <button id="btn-start" class="btn-main">ATIVAR RASTREAMENTO</button>
     </div>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwAjWFTiOVO5l08PQSH6SIJAKWmrJ2H5VNSsPDD7wPYphKR29b5ulofmZPkNqdzpqH_/exec
-"; // URL do Deploy
+        // SUBSTITUA PELA SUA URL DO GOOGLE APPS SCRIPT
+        const SCRIPT_URL = "SUA_URL_AQUI_DO_DEPLOY/exec"; 
+        
         let isTracking = false;
         let watchID = null;
-        let lastLat, lastLng;
+        let lastLat = null;
+        let lastLng = null;
 
         const btn = document.getElementById('btn-start');
         const dot = document.getElementById('dot');
         const statusText = document.getElementById('status-text');
+        const timeVal = document.getElementById('time-val');
 
-        function updateMap(lat, lng) {
-            const mapUrl = `https://www.google.com/maps/embed/v1/view?key=SUA_MAPS_API_KEY_OPCIONAL&center=${lat},${lng}&zoom=17`;
-            // Se não tiver chave API, usamos o link embed simples:
-            const simpleMap = `https://maps.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
-            document.getElementById('map-view').innerHTML = `<iframe src="${simpleMap}"></iframe>`;
+        // Função para atualizar o mapa na tela
+        function updateMapDisplay(lat, lng) {
+            const mapView = document.getElementById('map-view');
+            const embedUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
+            mapView.innerHTML = `<iframe src="${embedUrl}" style="width:100%; height:100%; border:0;"></iframe>`;
         }
 
-        async function sendData() {
-            if (!isTracking || !lastLat) return;
+        // Função para enviar os dados ao Google Drive
+        async function syncToDrive() {
+            if (!isTracking || lastLat === null) return;
 
             const payload = { lat: lastLat, lng: lastLng };
             
             try {
+                // Usamos no-cors para evitar bloqueios de segurança do navegador mobile
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
+                    cache: 'no-cache',
                     body: JSON.stringify(payload)
                 });
-                document.getElementById('time-val').innerText = new Date().toLocaleTimeString();
-                console.log("Evidência enviada.");
+                timeVal.innerText = new Date().toLocaleTimeString();
+                console.log("Payload enviado com sucesso.");
             } catch (e) {
-                console.error("Falha no sync.");
+                console.error("Erro na sincronização:", e);
+                statusText.innerText = "ERRO DE CONEXÃO";
             }
         }
 
+        // Evento do Botão Principal
         btn.addEventListener('click', () => {
             if (!isTracking) {
+                if (!navigator.geolocation) {
+                    alert("Seu navegador não suporta GPS.");
+                    return;
+                }
+
                 isTracking = true;
-                btn.innerText = "PARAR RASTREAMENTO";
+                btn.innerText = "ENCERRAR RASTREAMENTO";
                 btn.classList.add('active');
                 dot.classList.add('live');
-                statusText.innerText = "SISTEMA ONLINE";
-                
-                // Inicia GPS
-                watchID = navigator.geolocation.watchPosition(p => {
-                    lastLat = p.coords.latitude;
-                    lastLng = p.coords.longitude;
-                    document.getElementById('lat-val').innerText = lastLat.toFixed(6);
-                    document.getElementById('lng-val').innerText = lastLng.toFixed(6);
-                    updateMap(lastLat, lastLng);
-                }, null, { enableHighAccuracy: true });
+                statusText.innerText = "BUSCANDO SATÉLITES...";
 
-                // Loop de 5 segundos
-                window.trackingInterval = setInterval(sendData, 5000);
+                // Iniciar monitoramento de posição
+                watchID = navigator.geolocation.watchPosition(
+                    (p) => {
+                        lastLat = p.coords.latitude;
+                        lastLng = p.coords.longitude;
+                        
+                        document.getElementById('lat-val').innerText = lastLat.toFixed(6);
+                        document.getElementById('lng-val').innerText = lastLng.toFixed(6);
+                        statusText.innerText = "SISTEMA ONLINE";
+                        
+                        updateMapDisplay(lastLat, lastLng);
+                    },
+                    (err) => {
+                        console.error("Erro GPS:", err);
+                        alert("Por favor, ative o GPS e autorize o site.");
+                        location.reload();
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+
+                // Iniciar ciclo de envio a cada 5 segundos
+                window.syncInterval = setInterval(syncToDrive, 5000);
+
             } else {
-                location.reload(); // Forma mais limpa de parar tudo
+                // Para o rastreamento e recarrega
+                isTracking = false;
+                if (watchID) navigator.geolocation.clearWatch(watchID);
+                if (window.syncInterval) clearInterval(window.syncInterval);
+                location.reload();
             }
         });
     </script>
