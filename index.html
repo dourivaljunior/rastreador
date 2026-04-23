@@ -3,75 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRACKERPRO</title>
+    <title>TESTE DRIVE</title>
     <style>
-        body { background: #121212; color: white; font-family: sans-serif; padding: 20px; text-align: center; }
-        .info-box { background: #1e1e1e; border: 1px solid #333; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
-        .label { color: #888; font-size: 12px; font-weight: bold; }
-        .val { font-size: 20px; font-family: monospace; margin-bottom: 10px; }
-        .btn { background: #0070f3; color: white; border: none; padding: 20px; width: 100%; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        #map-view { width: 100%; height: 300px; background: #000; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
-        iframe { width: 100%; height: 100%; border: none; border-radius: 10px; }
+        body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .btn { background: #238636; color: #fff; border: none; padding: 30px 60px; border-radius: 10px; font-size: 1.5rem; font-weight: bold; cursor: pointer; border: 2px solid #30363d; }
+        .btn:active { background: #2ea043; }
     </style>
 </head>
 <body>
 
-    <h2>TRACKERPRO</h2>
-    <p id="status-txt" style="color: #555;">AGUARDANDO GPS...</p>
-
-    <div id="map-view"></div>
-
-    <div class="info-box">
-        <div class="label">LATITUDE</div>
-        <div id="lat-val" class="val">0.000000</div>
-        <div class="label">LONGITUDE</div>
-        <div id="lng-val" class="val">0.000000</div>
-        <div class="label">ÚLTIMA SINCRONIZAÇÃO</div>
-        <div id="sync-val" class="val">--:--:--</div>
-    </div>
-
-    <button id="btn-sync" class="btn">SINCRONIZAR LOCALIZAÇÃO NO DRIVE</button>
+    <button id="btn-teste" class="btn">CRIAR PASTA NO DRIVE</button>
 
     <script>
-        // COLE A NOVA URL DO DEPLOY AQUI
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt7_1GgdTwUHXYSFrr3kdKKq8duxjrNQA1c7HZ7EGQe2KnbNz64AcMoWezjZblh6hi/exec"; 
-        
-        let lastLat, lastLng;
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxWqRSh2PgPOaLInVUUq1UD5e6woyLvfwVXFOv5gbXs9alQasA6oZRm1zF4PwRvA_00/exec";
 
-        // GPS em tempo real (Sem atualização de mapa forçada para não piscar)
-        navigator.geolocation.watchPosition(p => {
-            lastLat = p.coords.latitude;
-            lastLng = p.coords.longitude;
-            document.getElementById('lat-val').innerText = lastLat.toFixed(6);
-            document.getElementById('lng-val').innerText = lastLng.toFixed(6);
-            document.getElementById('status-txt').innerText = "SISTEMA ONLINE";
-            document.getElementById('status-txt').style.color = "#00ff00";
-
-            // Só carrega o mapa uma vez ou quando mudar drasticamente
-            if (!document.querySelector('iframe')) {
-                const embed = `https://maps.google.com/maps?q=${lastLat},${lastLng}&z=17&output=embed`;
-                document.getElementById('map-view').innerHTML = `<iframe src="${embed}"></iframe>`;
-            }
-        }, null, { enableHighAccuracy: true });
-
-        document.getElementById('btn-sync').onclick = async function() {
-            if (!lastLat) return alert("Aguardando sinal GPS...");
-            
-            this.innerText = "ENVIANDO...";
-            this.disabled = true;
+        document.getElementById('btn-teste').onclick = async function() {
+            this.innerText = "PROCESSANDO...";
+            this.style.opacity = "0.5";
 
             try {
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    body: JSON.stringify({ lat: lastLat, lng: lastLng })
+                    body: JSON.stringify({acao: "criar_pasta"})
                 });
-                document.getElementById('sync-val').innerText = new Date().toLocaleTimeString();
+                alert("Comando enviado! Verifique o Google Drive.");
             } catch (e) {
-                alert("Erro na conexão");
+                alert("Erro na requisição.");
             } finally {
-                this.innerText = "SINCRONIZAR LOCALIZAÇÃO NO DRIVE";
-                this.disabled = false;
+                this.innerText = "CRIAR PASTA NO DRIVE";
+                this.style.opacity = "1";
             }
         };
     </script>
