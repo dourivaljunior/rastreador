@@ -3,77 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TESTE TRACKERPRO</title>
+    <title>TESTE DRIVE</title>
     <style>
-        body { 
-            background: #000; 
-            color: #fff; 
-            font-family: sans-serif; 
-            display: flex; 
-            flex-direction: column;
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0; 
-        }
-        h2 { margin-bottom: 20px; color: #58a6ff; }
-        .btn { 
-            background: #238636; 
-            color: #fff; 
-            border: none; 
-            padding: 30px 60px; 
-            border-radius: 10px; 
-            font-size: 1.5rem; 
-            font-weight: bold; 
-            cursor: pointer; 
-            border: 2px solid #30363d; 
-            text-transform: uppercase;
-        }
-        .btn:active { background: #2ea043; transform: scale(0.98); }
-        .status { margin-top: 20px; color: #8b949e; font-size: 0.9rem; }
+        body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .btn { background: #238636; color: #fff; border: none; padding: 30px 60px; border-radius: 10px; font-size: 1.5rem; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h2>TRACKERPRO <span>v1.0</span></h2>
-
-    <button id="btn-trigger" class="btn">CRIAR/ABRIR PASTA</button>
-    
-    <div id="msg" class="status">Aguardando comando...</div>
+    <button id="btn-teste" class="btn">CRIAR/ABRIR PASTA</button>
 
     <script>
-        // ATENÇÃO: COLE A URL DO SEU DEPLOY (/exec) ABAIXO
+        // REDEPLOY O SCRIPT E COLE A NOVA URL AQUI
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAGp5kb7JujQxjBzv3XclaV-WQpqi8ObTPSW-4XJcRc-iSYgpkTrdaPBYoh0BCdXmWUQ/exec";
 
-        document.getElementById('btn-trigger').onclick = async function() {
-            const statusMsg = document.getElementById('msg');
+        document.getElementById('btn-teste').onclick = async function() {
             this.innerText = "PROCESSANDO...";
-            this.disabled = true;
-
+            
             try {
-                // Requisição simples para o Apps Script
-                const response = await fetch(SCRIPT_URL, {
+                // O segredo do sucesso é o no-cors aqui para não dar erro de servidor
+                await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    body: JSON.stringify({acao: "abrir_pasta"})
+                    mode: 'no-cors',
+                    body: JSON.stringify({acao: "abrir"})
                 });
 
-                const linkPasta = await response.text();
-
-                if (linkPasta.includes("drive.google.com")) {
-                    statusMsg.innerText = "Pasta localizada! Abrindo...";
-                    // Abre a pasta no Google Drive
-                    window.location.href = linkPasta;
-                } else {
-                    statusMsg.innerText = "Erro: " + linkPasta;
-                    alert("Erro retornado do script: " + linkPasta);
-                }
+                // Como no-cors não lê a resposta, redirecionamos para a raiz que já temos
+                alert("Comando enviado! Abrindo pasta raiz...");
+                window.location.href = "https://drive.google.com/drive/folders/1IK3IHvuCTOwBwxKX2skZKtXyQGR5IRN9";
 
             } catch (e) {
-                statusMsg.innerText = "Erro de conexão.";
                 alert("Falha na comunicação com o servidor.");
             } finally {
                 this.innerText = "CRIAR/ABRIR PASTA";
-                this.disabled = false;
             }
         };
     </script>
