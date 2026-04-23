@@ -3,91 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRACKERPRO | GPS</title>
-    <link rel="stylesheet" href="style.css">
+    <title>TESTE TRACKERPRO</title>
+    <style>
+        body { 
+            background: #000; 
+            color: #fff; 
+            font-family: sans-serif; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        h2 { margin-bottom: 20px; color: #58a6ff; }
+        .btn { 
+            background: #238636; 
+            color: #fff; 
+            border: none; 
+            padding: 30px 60px; 
+            border-radius: 10px; 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            cursor: pointer; 
+            border: 2px solid #30363d; 
+            text-transform: uppercase;
+        }
+        .btn:active { background: #2ea043; transform: scale(0.98); }
+        .status { margin-top: 20px; color: #8b949e; font-size: 0.9rem; }
+    </style>
 </head>
 <body>
 
-    <div class="container">
-        <header>
-            <div class="logo">TRACKER<span>PRO</span></div>
-            <div id="status" class="status-box">SINAL: AGUARDANDO</div>
-        </header>
+    <h2>TRACKERPRO <span>v1.0</span></h2>
 
-        <div id="map-area" class="map-container">
-            <p style="color: #444;">A carregar satélites...</p>
-        </div>
-
-        <div class="telemetria">
-            <div class="campo">
-                <span class="lbl">LATITUDE</span>
-                <span id="lat-val" class="val">0.000000</span>
-            </div>
-            <div class="campo">
-                <span class="lbl">LONGITUDE</span>
-                <span id="lng-val" class="val">0.000000</span>
-            </div>
-            <div class="campo">
-                <span class="lbl">ÚLTIMA ATUALIZAÇÃO</span>
-                <span id="time-val" class="val">--:--:--</span>
-            </div>
-        </div>
-
-        <button id="btn-main" class="btn-send">ENVIAR FOTO E ABRIR PASTA</button>
-    </div>
+    <button id="btn-trigger" class="btn">CRIAR/ABRIR PASTA</button>
+    
+    <div id="msg" class="status">Aguardando comando...</div>
 
     <script>
-        // ATENÇÃO: Substitua pelo seu novo URL de Deploy (/exec)
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzy4YdjYRBmgFv3GsUtyD6-aTxW3PNQZ7iSW0gVtxW_Q7rAajghaY0K5XYhuoKXB6wsbA/exec"; 
-        
-        let currentLat, currentLng;
+        // ATENÇÃO: COLE A URL DO SEU DEPLOY (/exec) ABAIXO
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAGp5kb7JujQxjBzv3XclaV-WQpqi8ObTPSW-4XJcRc-iSYgpkTrdaPBYoh0BCdXmWUQ/exec";
 
-        // Monitor de GPS (Mapa Estático: carrega uma vez e fixa)
-        navigator.geolocation.watchPosition(p => {
-            currentLat = p.coords.latitude;
-            currentLng = p.coords.longitude;
-            
-            document.getElementById('lat-val').innerText = currentLat.toFixed(6);
-            document.getElementById('lng-val').innerText = currentLng.toFixed(6);
-            document.getElementById('status').innerText = "SINAL: ONLINE";
-            document.getElementById('status').style.color = "#00ff00";
-
-            if (!document.querySelector('iframe')) {
-                const embed = `https://maps.google.com/maps?q=${currentLat},${currentLng}&z=17&output=embed`;
-                document.getElementById('map-area').innerHTML = `<iframe src="${embed}"></iframe>`;
-            }
-        }, null, { enableHighAccuracy: true });
-
-        // Acção do Botão
-        document.getElementById('btn-main').onclick = async function() {
-            if (!currentLat) return alert("Aguarde o sinal do GPS...");
-            
-            const btn = this;
-            btn.innerText = "A PROCESSAR...";
-            btn.disabled = true;
+        document.getElementById('btn-trigger').onclick = async function() {
+            const statusMsg = document.getElementById('msg');
+            this.innerText = "PROCESSANDO...";
+            this.disabled = true;
 
             try {
+                // Requisição simples para o Apps Script
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // Mantido para evitar erro de CORS do Google
-                    body: JSON.stringify({ lat: currentLat, lng: currentLng })
+                    body: JSON.stringify({acao: "abrir_pasta"})
                 });
 
-                // Como 'no-cors' não permite ler o corpo da resposta no fetch comum,
-                // vamos disparar a abertura da pasta raiz em caso de sucesso no envio
-                // ou usar um redireccionamento programado.
-                
-                document.getElementById('time-val').innerText = new Date().toLocaleTimeString();
-                
-                // Redireccionamento manual para a pasta após o envio
-                const linkRaiz = "https://drive.google.com/drive/folders/1IK3IHvuCTOwBwxKX2skZKtXyQGR5IRN9";
-                window.location.href = linkRaiz;
+                const linkPasta = await response.text();
+
+                if (linkPasta.includes("drive.google.com")) {
+                    statusMsg.innerText = "Pasta localizada! Abrindo...";
+                    // Abre a pasta no Google Drive
+                    window.location.href = linkPasta;
+                } else {
+                    statusMsg.innerText = "Erro: " + linkPasta;
+                    alert("Erro retornado do script: " + linkPasta);
+                }
 
             } catch (e) {
-                alert("Erro ao comunicar com o servidor.");
+                statusMsg.innerText = "Erro de conexão.";
+                alert("Falha na comunicação com o servidor.");
             } finally {
-                btn.innerText = "ENVIAR FOTO E ABRIR PASTA";
-                btn.disabled = false;
+                this.innerText = "CRIAR/ABRIR PASTA";
+                this.disabled = false;
             }
         };
     </script>
