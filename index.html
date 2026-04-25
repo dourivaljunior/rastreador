@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>GPS Mapper - Monitoramento V2</title>
+    <title>GPS Mapper - Monitoramento</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -194,14 +194,14 @@
         
         // Atualizar o mapa APENAS UMA VEZ (estático)
         function updateMapOnce(lat, lng) {
-            if (mapLoaded) return; // Não recarrega se já estiver carregado
+            if (mapLoaded) return;
             const mapContainer = document.getElementById('mapContainer');
             const mapUrl = `https://www.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
             mapContainer.innerHTML = `<iframe src="${mapUrl}" allow="geolocation"></iframe>`;
             mapLoaded = true;
         }
         
-        // Enviar screenshot do mapa para o Drive
+        // Enviar captura do mapa para o Drive
         async function sendMapScreenshot() {
             if (!currentLat || !currentLng) {
                 console.log("Sem localização ainda");
@@ -212,12 +212,18 @@
             const statusMsg = document.getElementById('statusMsg');
             statusMsg.innerHTML = "📤 Enviando captura...";
             
+            // Dados completos com timestamp em diferentes formatos
+            const agora = new Date();
+            const timestampArquivo = Utilities.formatDate(agora, "America/Sao_Paulo", "yyyy-MM-dd_HH-mm-ss");
+            
             const dados = {
                 tipo: "mapa_periodico",
                 latitude: currentLat,
                 longitude: currentLng,
                 accuracy: currentAccuracy,
-                timestamp: timestamp
+                timestamp: timestamp,
+                timestampArquivo: timestampArquivo,
+                timestampCompleto: agora.toISOString()
             };
             
             try {
@@ -260,10 +266,8 @@
             document.getElementById('startBtn').disabled = true;
             document.getElementById('stopBtn').disabled = false;
             
-            // Enviar imediatamente a primeira captura
             sendMapScreenshot();
             
-            // Configurar intervalo de 5 segundos
             captureInterval = setInterval(() => {
                 if (currentLat && currentLng) {
                     sendMapScreenshot();
@@ -307,20 +311,16 @@
                     currentLng = position.coords.longitude;
                     currentAccuracy = position.coords.accuracy;
                     
-                    // Atualizar display
                     document.getElementById('lat').textContent = currentLat.toFixed(6);
                     document.getElementById('lng').textContent = currentLng.toFixed(6);
                     document.getElementById('accuracy').textContent = Math.round(currentAccuracy);
                     updateTimestamp();
                     
-                    // Atualizar status do GPS (círculo verde)
                     gpsStatusSpan.innerHTML = "ONLINE";
                     statusCircle.className = "status-circle circle-online";
                     
-                    // Carregar mapa APENAS UMA VEZ (estático)
                     updateMapOnce(currentLat, currentLng);
                     
-                    // Se não estiver capturando, mostrar mensagem
                     if (!isCapturing) {
                         document.getElementById('statusMsg').innerHTML = "✅ GPS OK. Clique em Iniciar para começar as capturas";
                     }
@@ -353,17 +353,14 @@
             );
         }
         
-        // Inicializar
         startGPSMonitoring();
         
-        // Atualizar timestamp a cada segundo
         setInterval(() => {
             if (!isCapturing) {
                 updateTimestamp();
             }
         }, 1000);
         
-        // Limpar ao fechar
         window.addEventListener('beforeunload', () => {
             if (watchId) {
                 navigator.geolocation.clearWatch(watchId);
