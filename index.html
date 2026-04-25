@@ -173,7 +173,7 @@
     </div>
     
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYeOeo4ohxoVOqGG_jRuAOgfvOHaTSf_zuS90oebKQtGSnNU33IEGSH_7OswQo7fpTFQ/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxuAt3TNC7PfbRysSp8GXu750I4smVO5L3iNRfe-QrQJVHgMB_WRfKlUoDUom6-MrNzyg/exec";
         
         let watchId = null;
         let currentLat = null;
@@ -183,6 +183,18 @@
         let captureInterval = null;
         let captureCount = 0;
         let mapLoaded = false;
+        
+        // Função para formatar timestamp para arquivo
+        function getTimestampArquivo() {
+            const agora = new Date();
+            const ano = agora.getFullYear();
+            const mes = String(agora.getMonth() + 1).padStart(2, '0');
+            const dia = String(agora.getDate()).padStart(2, '0');
+            const hora = String(agora.getHours()).padStart(2, '0');
+            const minuto = String(agora.getMinutes()).padStart(2, '0');
+            const segundo = String(agora.getSeconds()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}_${hora}-${minuto}-${segundo}`;
+        }
         
         // Atualizar timestamp atual
         function updateTimestamp() {
@@ -205,48 +217,59 @@
         async function sendMapScreenshot() {
             if (!currentLat || !currentLng) {
                 console.log("Sem localização ainda");
+                document.getElementById('statusMsg').innerHTML = "⚠️ Aguardando GPS...";
                 return false;
             }
             
-            const timestamp = updateTimestamp();
+            const timestampDisplay = updateTimestamp();
+            const timestampArquivo = getTimestampArquivo();
+            const agoraISO = new Date().toISOString();
+            
             const statusMsg = document.getElementById('statusMsg');
             statusMsg.innerHTML = "📤 Enviando captura...";
-            
-            // Dados completos com timestamp em diferentes formatos
-            const agora = new Date();
-            const timestampArquivo = Utilities.formatDate(agora, "America/Sao_Paulo", "yyyy-MM-dd_HH-mm-ss");
             
             const dados = {
                 tipo: "mapa_periodico",
                 latitude: currentLat,
                 longitude: currentLng,
                 accuracy: currentAccuracy,
-                timestamp: timestamp,
+                timestamp: timestampDisplay,
                 timestampArquivo: timestampArquivo,
-                timestampCompleto: agora.toISOString()
+                timestampCompleto: agoraISO
             };
             
             try {
-                await fetch(SCRIPT_URL, {
+                // Usar POST normal sem no-cors para ver erros
+                const response = await fetch(SCRIPT_URL, {
                     method: "POST",
-                    mode: "no-cors",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
                     body: JSON.stringify(dados)
                 });
                 
-                captureCount++;
-                document.getElementById('captureCount').textContent = captureCount;
-                statusMsg.innerHTML = `✅ Captura ${captureCount} enviada às ${timestamp}`;
+                const resultado = await response.text();
+                console.log("Resposta do servidor:", resultado);
                 
-                setTimeout(() => {
-                    if (isCapturing) {
-                        statusMsg.innerHTML = `📡 Monitorando GPS - Próxima captura em 5s...`;
-                    }
-                }, 2000);
-                
-                return true;
+                if (resultado === "OK") {
+                    captureCount++;
+                    document.getElementById('captureCount').textContent = captureCount;
+                    statusMsg.innerHTML = `✅ Captura ${captureCount} enviada às ${timestampDisplay}`;
+                    
+                    setTimeout(() => {
+                        if (isCapturing) {
+                            statusMsg.innerHTML = `📡 Próxima captura em 5s...`;
+                        }
+                    }, 2000);
+                    
+                    return true;
+                } else {
+                    statusMsg.innerHTML = "❌ Erro: " + resultado;
+                    return false;
+                }
             } catch (error) {
-                console.error("Erro ao enviar:", error);
-                statusMsg.innerHTML = "❌ Erro ao enviar captura";
+                console.error("Erro detalhado:", error);
+                statusMsg.innerHTML = "❌ Erro ao enviar: " + error.message;
                 return false;
             }
         }
@@ -266,8 +289,10 @@
             document.getElementById('startBtn').disabled = true;
             document.getElementById('stopBtn').disabled = false;
             
+            // Enviar primeira captura
             sendMapScreenshot();
             
+            // Configurar intervalo de 5 segundos
             captureInterval = setInterval(() => {
                 if (currentLat && currentLng) {
                     sendMapScreenshot();
@@ -291,7 +316,7 @@
             
             document.getElementById('startBtn').disabled = false;
             document.getElementById('stopBtn').disabled = true;
-            document.getElementById('statusMsg').innerHTML = "⏸️ Captura pausada. Clique em Iniciar para continuar";
+            document.getElementById('statusMsg').innerHTML = "⏸️ Captura pausada";
         }
         
         // Monitorar posição do GPS
@@ -322,14 +347,13 @@
                     updateMapOnce(currentLat, currentLng);
                     
                     if (!isCapturing) {
-                        document.getElementById('statusMsg').innerHTML = "✅ GPS OK. Clique em Iniciar para começar as capturas";
+                        document.getElementById('statusMsg').innerHTML = "✅ GPS OK. Clique em Iniciar";
                     }
                 },
                 (error) => {
                     console.error("Erro GPS:", error);
                     gpsStatusSpan.innerHTML = "OFFLINE";
                     statusCircle.className = "status-circle circle-offline";
-                    document.getElementById('statusMsg').innerHTML = "⚠️ Erro no GPS: " + error.message;
                     
                     let errorMsg = "";
                     switch(error.code) {
@@ -342,7 +366,10 @@
                         case error.TIMEOUT:
                             errorMsg = "Tempo esgotado";
                             break;
+                        default:
+                            errorMsg = error.message;
                     }
+                    document.getElementById('statusMsg').innerHTML = "⚠️ " + errorMsg;
                     document.getElementById('accuracy').textContent = errorMsg;
                 },
                 {
@@ -353,14 +380,17 @@
             );
         }
         
+        // Inicializar
         startGPSMonitoring();
         
+        // Atualizar timestamp a cada segundo
         setInterval(() => {
             if (!isCapturing) {
                 updateTimestamp();
             }
         }, 1000);
         
+        // Limpar ao fechar
         window.addEventListener('beforeunload', () => {
             if (watchId) {
                 navigator.geolocation.clearWatch(watchId);
