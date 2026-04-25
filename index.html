@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>GPS Mapper - Monitoramento</title>
+    <title>GPS Mapper - Monitoramento V2</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -30,17 +30,26 @@
             border-radius: 10px;
             padding: 10px;
             margin-bottom: 15px;
-            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
-        .status-online {
-            color: #4ade80;
-            font-weight: bold;
+        .status-circle {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
         }
         
-        .status-offline {
-            color: #f87171;
-            font-weight: bold;
+        .circle-online {
+            background-color: #22c55e;
+            box-shadow: 0 0 5px #22c55e;
+        }
+        
+        .circle-offline {
+            background-color: #ef4444;
+            box-shadow: 0 0 5px #ef4444;
         }
         
         .coord-box {
@@ -132,7 +141,8 @@
         <h2 style="text-align: center; margin-bottom: 20px;">📍 GPS Mapper</h2>
         
         <div class="gps-status">
-            <span>📡 Status do GPS: </span>
+            <div class="status-circle" id="statusCircle"></div>
+            <span>Status do GPS: </span>
             <span id="gpsStatus">Aguardando...</span>
         </div>
         
@@ -163,7 +173,7 @@
     </div>
     
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSC2Yj7aKwxUtOOoeZw0erpHVrfkCNEWAT0jKzoQozVCnPyg1P8xHov4Nhq8y_42Cupg/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYeOeo4ohxoVOqGG_jRuAOgfvOHaTSf_zuS90oebKQtGSnNU33IEGSH_7OswQo7fpTFQ/exec";
         
         let watchId = null;
         let currentLat = null;
@@ -172,6 +182,7 @@
         let isCapturing = false;
         let captureInterval = null;
         let captureCount = 0;
+        let mapLoaded = false;
         
         // Atualizar timestamp atual
         function updateTimestamp() {
@@ -181,11 +192,13 @@
             return formatted;
         }
         
-        // Atualizar o mapa no iframe
-        function updateMap(lat, lng) {
+        // Atualizar o mapa APENAS UMA VEZ (estático)
+        function updateMapOnce(lat, lng) {
+            if (mapLoaded) return; // Não recarrega se já estiver carregado
             const mapContainer = document.getElementById('mapContainer');
             const mapUrl = `https://www.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
             mapContainer.innerHTML = `<iframe src="${mapUrl}" allow="geolocation"></iframe>`;
+            mapLoaded = true;
         }
         
         // Enviar screenshot do mapa para o Drive
@@ -199,8 +212,6 @@
             const statusMsg = document.getElementById('statusMsg');
             statusMsg.innerHTML = "📤 Enviando captura...";
             
-            // Criar um canvas para capturar o iframe (não é possível capturar iframe diretamente)
-            // Então vamos enviar as coordenadas e o Google Apps Script vai gerar o mapa estático
             const dados = {
                 tipo: "mapa_periodico",
                 latitude: currentLat,
@@ -210,7 +221,7 @@
             };
             
             try {
-                const response = await fetch(SCRIPT_URL, {
+                await fetch(SCRIPT_URL, {
                     method: "POST",
                     mode: "no-cors",
                     body: JSON.stringify(dados)
@@ -282,12 +293,13 @@
         // Monitorar posição do GPS
         function startGPSMonitoring() {
             if (!navigator.geolocation) {
-                document.getElementById('gpsStatus').innerHTML = "❌ Não suportado";
-                document.getElementById('gpsStatus').className = "status-offline";
+                document.getElementById('gpsStatus').innerHTML = "Não suportado";
+                document.getElementById('statusCircle').className = "status-circle circle-offline";
                 return;
             }
             
             const gpsStatusSpan = document.getElementById('gpsStatus');
+            const statusCircle = document.getElementById('statusCircle');
             
             watchId = navigator.geolocation.watchPosition(
                 (position) => {
@@ -301,12 +313,12 @@
                     document.getElementById('accuracy').textContent = Math.round(currentAccuracy);
                     updateTimestamp();
                     
-                    // Atualizar status do GPS
-                    gpsStatusSpan.innerHTML = "✅ ONLINE";
-                    gpsStatusSpan.className = "status-online";
+                    // Atualizar status do GPS (círculo verde)
+                    gpsStatusSpan.innerHTML = "ONLINE";
+                    statusCircle.className = "status-circle circle-online";
                     
-                    // Atualizar mapa
-                    updateMap(currentLat, currentLng);
+                    // Carregar mapa APENAS UMA VEZ (estático)
+                    updateMapOnce(currentLat, currentLng);
                     
                     // Se não estiver capturando, mostrar mensagem
                     if (!isCapturing) {
@@ -315,8 +327,8 @@
                 },
                 (error) => {
                     console.error("Erro GPS:", error);
-                    gpsStatusSpan.innerHTML = "❌ OFFLINE";
-                    gpsStatusSpan.className = "status-offline";
+                    gpsStatusSpan.innerHTML = "OFFLINE";
+                    statusCircle.className = "status-circle circle-offline";
                     document.getElementById('statusMsg').innerHTML = "⚠️ Erro no GPS: " + error.message;
                     
                     let errorMsg = "";
