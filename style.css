@@ -1,1 +1,377 @@
-
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>GPS Mapper - Monitoramento</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .gps-status {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-circle {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .circle-online {
+            background-color: #22c55e;
+            box-shadow: 0 0 5px #22c55e;
+        }
+        
+        .circle-offline {
+            background-color: #ef4444;
+            box-shadow: 0 0 5px #ef4444;
+        }
+        
+        .coord-box {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .coord-box p {
+            margin: 5px 0;
+        }
+        
+        .map-container {
+            width: 100%;
+            height: 400px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-start {
+            background: #22c55e;
+            color: white;
+        }
+        
+        .btn-stop {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-start:disabled, .btn-stop:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .info-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        .capture-count {
+            font-size: 18px;
+            font-weight: bold;
+            color: #fbbf24;
+        }
+        
+        hr {
+            margin: 10px 0;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 style="text-align: center; margin-bottom: 20px;">📍 GPS Mapper</h2>
+        
+        <div class="gps-status">
+            <div class="status-circle" id="statusCircle"></div>
+            <span>Status do GPS: </span>
+            <span id="gpsStatus">Aguardando...</span>
+        </div>
+        
+        <div class="coord-box">
+            <p>🌐 Latitude: <span id="lat">---</span></p>
+            <p>🌐 Longitude: <span id="lng">---</span></p>
+            <p>🕐 Timestamp: <span id="timestamp">---</span></p>
+            <p>🎯 Precisão: <span id="accuracy">---</span> metros</p>
+        </div>
+        
+        <div class="map-container" id="mapContainer">
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #1e1e1e;">
+                Aguardando localização...
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn-start" id="startBtn" onclick="startCapture()">▶ INICIAR CAPTURA</button>
+            <button class="btn-stop" id="stopBtn" onclick="stopCapture()" disabled>⏹ PARAR</button>
+        </div>
+        
+        <div class="info-panel">
+            <p>📸 Capturas enviadas: <span class="capture-count" id="captureCount">0</span></p>
+            <p id="statusMsg">⚠️ Clique em "Iniciar" para começar</p>
+            <hr>
+            <p style="font-size: 10px; opacity: 0.7;">📁 As capturas serão salvas no Drive automaticamente</p>
+        </div>
+    </div>
+    
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYeOeo4ohxoVOqGG_jRuAOgfvOHaTSf_zuS90oebKQtGSnNU33IEGSH_7OswQo7fpTFQ/exec";
+        
+        let watchId = null;
+        let currentLat = null;
+        let currentLng = null;
+        let currentAccuracy = null;
+        let isCapturing = false;
+        let captureInterval = null;
+        let captureCount = 0;
+        let mapLoaded = false;
+        
+        // Atualizar timestamp atual
+        function updateTimestamp() {
+            const now = new Date();
+            const formatted = now.toLocaleString('pt-BR');
+            document.getElementById('timestamp').textContent = formatted;
+            return formatted;
+        }
+        
+        // Atualizar o mapa APENAS UMA VEZ (estático)
+        function updateMapOnce(lat, lng) {
+            if (mapLoaded) return; // Não recarrega se já estiver carregado
+            const mapContainer = document.getElementById('mapContainer');
+            const mapUrl = `https://www.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
+            mapContainer.innerHTML = `<iframe src="${mapUrl}" allow="geolocation"></iframe>`;
+            mapLoaded = true;
+        }
+        
+        // Enviar screenshot do mapa para o Drive
+        async function sendMapScreenshot() {
+            if (!currentLat || !currentLng) {
+                console.log("Sem localização ainda");
+                return false;
+            }
+            
+            const timestamp = updateTimestamp();
+            const statusMsg = document.getElementById('statusMsg');
+            statusMsg.innerHTML = "📤 Enviando captura...";
+            
+            const dados = {
+                tipo: "mapa_periodico",
+                latitude: currentLat,
+                longitude: currentLng,
+                accuracy: currentAccuracy,
+                timestamp: timestamp
+            };
+            
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    body: JSON.stringify(dados)
+                });
+                
+                captureCount++;
+                document.getElementById('captureCount').textContent = captureCount;
+                statusMsg.innerHTML = `✅ Captura ${captureCount} enviada às ${timestamp}`;
+                
+                setTimeout(() => {
+                    if (isCapturing) {
+                        statusMsg.innerHTML = `📡 Monitorando GPS - Próxima captura em 5s...`;
+                    }
+                }, 2000);
+                
+                return true;
+            } catch (error) {
+                console.error("Erro ao enviar:", error);
+                statusMsg.innerHTML = "❌ Erro ao enviar captura";
+                return false;
+            }
+        }
+        
+        // Iniciar captura periódica
+        function startCapture() {
+            if (!currentLat || !currentLng) {
+                alert("⚠️ Aguarde o GPS ser localizado antes de iniciar!");
+                return;
+            }
+            
+            if (isCapturing) return;
+            
+            isCapturing = true;
+            captureCount = 0;
+            document.getElementById('captureCount').textContent = captureCount;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            // Enviar imediatamente a primeira captura
+            sendMapScreenshot();
+            
+            // Configurar intervalo de 5 segundos
+            captureInterval = setInterval(() => {
+                if (currentLat && currentLng) {
+                    sendMapScreenshot();
+                } else {
+                    document.getElementById('statusMsg').innerHTML = "⚠️ Aguardando GPS...";
+                }
+            }, 5000);
+            
+            document.getElementById('statusMsg').innerHTML = "▶️ Captura ativa - Enviando a cada 5 segundos";
+        }
+        
+        // Parar captura
+        function stopCapture() {
+            if (!isCapturing) return;
+            
+            isCapturing = false;
+            if (captureInterval) {
+                clearInterval(captureInterval);
+                captureInterval = null;
+            }
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('statusMsg').innerHTML = "⏸️ Captura pausada. Clique em Iniciar para continuar";
+        }
+        
+        // Monitorar posição do GPS
+        function startGPSMonitoring() {
+            if (!navigator.geolocation) {
+                document.getElementById('gpsStatus').innerHTML = "Não suportado";
+                document.getElementById('statusCircle').className = "status-circle circle-offline";
+                return;
+            }
+            
+            const gpsStatusSpan = document.getElementById('gpsStatus');
+            const statusCircle = document.getElementById('statusCircle');
+            
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    currentLat = position.coords.latitude;
+                    currentLng = position.coords.longitude;
+                    currentAccuracy = position.coords.accuracy;
+                    
+                    // Atualizar display
+                    document.getElementById('lat').textContent = currentLat.toFixed(6);
+                    document.getElementById('lng').textContent = currentLng.toFixed(6);
+                    document.getElementById('accuracy').textContent = Math.round(currentAccuracy);
+                    updateTimestamp();
+                    
+                    // Atualizar status do GPS (círculo verde)
+                    gpsStatusSpan.innerHTML = "ONLINE";
+                    statusCircle.className = "status-circle circle-online";
+                    
+                    // Carregar mapa APENAS UMA VEZ (estático)
+                    updateMapOnce(currentLat, currentLng);
+                    
+                    // Se não estiver capturando, mostrar mensagem
+                    if (!isCapturing) {
+                        document.getElementById('statusMsg').innerHTML = "✅ GPS OK. Clique em Iniciar para começar as capturas";
+                    }
+                },
+                (error) => {
+                    console.error("Erro GPS:", error);
+                    gpsStatusSpan.innerHTML = "OFFLINE";
+                    statusCircle.className = "status-circle circle-offline";
+                    document.getElementById('statusMsg').innerHTML = "⚠️ Erro no GPS: " + error.message;
+                    
+                    let errorMsg = "";
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg = "Permissão negada";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg = "Posição indisponível";
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg = "Tempo esgotado";
+                            break;
+                    }
+                    document.getElementById('accuracy').textContent = errorMsg;
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 10000
+                }
+            );
+        }
+        
+        // Inicializar
+        startGPSMonitoring();
+        
+        // Atualizar timestamp a cada segundo
+        setInterval(() => {
+            if (!isCapturing) {
+                updateTimestamp();
+            }
+        }, 1000);
+        
+        // Limpar ao fechar
+        window.addEventListener('beforeunload', () => {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+            if (captureInterval) {
+                clearInterval(captureInterval);
+            }
+        });
+    </script>
+</body>
+</html>
